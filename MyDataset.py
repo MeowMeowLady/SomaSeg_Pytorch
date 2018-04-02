@@ -5,8 +5,10 @@ import os
 import numpy as np
 import random
 import torch
+import logging
 
 DEBUG = False
+
 class MyDataset(Dataset):
     def __init__(self, img_path, txt_path, data_transform, args):
         with open(txt_path) as input_file:
@@ -29,9 +31,7 @@ class MyDataset(Dataset):
         if float(negTot)/float(posTot) > neg_rate:
             dtcareNew = negTot - posTot*neg_rate
             dtcareIdx = random.sample(range(negTot), dtcareNew)
-            #label_flat = np.reshape(label, (label.size, -1)) 
-        print 'here'
-             # label_flat[negVox[0][x]][0] = 2 for 
+            label_flat[negVox[0][dtcareIdx]] = 2 
         return label
 
     # randomly transpose the imput data
@@ -54,21 +54,23 @@ class MyDataset(Dataset):
         img_fid = hf.File(img_name)
         img = img_fid['data'][:]
         label = img_fid['label'][:]
-        if DEBUG:
-            print type(img)
-            print 'origional:{}, {}'.format(img.shape, label.shape)
         img = np.squeeze(img)
         label = np.squeeze(label)
-        
+        if DEBUG:
+            logging.info('before add_dtcare')
         if self.neg_rate:
             label = self.add_dtcare(label, self.neg_rate)
         
+        if DEBUG:
+            logging.info('after add_dtcare)')
         if self.data_transform is not None:
             try:
                 if self.data_transform == 'transp':
                     img, label = self.rd_transp(img, label)
             except:
                 print("Cannot transform image: {}".format(img_name))
+        if DEBUG:
+            logging.info('after transform')
         img = img[np.newaxis, :]
         label = label[np.newaxis, :]
         img_tensor = torch.from_numpy(img).float()
